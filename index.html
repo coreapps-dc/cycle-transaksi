@@ -16,6 +16,17 @@
   <!-- Body1.html -->
   <div id="app"></div>
 
+<script>
+async function loadBody() {
+    const html = await fetch("components/body1.html")
+        .then(r => r.text());
+
+    document.getElementById("app").innerHTML = html;
+}
+
+loadBody();
+</script>
+
   <script src="js/core.js"></script>
   <script src="js/cycle-validasi.js"></script>
   <script src="js/admin.js"></script>
