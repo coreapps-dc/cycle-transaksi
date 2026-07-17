@@ -1,0 +1,435 @@
+  <div class="titlebar">
+    <div class="traffic-lights">
+      <div class="tl-dot close"></div>
+      <div class="tl-dot min"></div>
+      <div class="tl-dot max"></div>
+    </div>
+    <div class="titlebar-title">📋 Cycle Transaksi</div>
+    <div class="titlebar-actions">
+      <button type="button" class="ws-toggle-btn" id="btnWorkspaceToggle" onclick="toggleWorkspaceMode()"></button>
+    </div>
+  </div>
+
+  <div class="app-shell">
+    <div class="sidebar hidden" id="sidebarNav">
+      <div class="sidebar-brand">
+        <span><span class="side-label">📋 Cycle Transaksi</span><span class="side-label-collapsed" style="display:none;">📋</span></span>
+        <button type="button" class="sidebar-collapse-btn" id="btnSidebarCollapse" onclick="toggleSidebarCollapse()" title="Collapse sidebar">◀</button>
+      </div>
+
+      <div class="side-item" onclick="goHome_()"><span class="ic" style="background:var(--blue-bg);">🏠</span><span class="side-label"> Home</span></div>
+
+      <div class="side-section-title">Menu Utama</div>
+      <div class="side-item" onclick="bukaCycleTransaksi()">
+        <span class="ic" style="background:var(--orange-bg);">📦</span><span class="side-label"> Cycle Transaksi</span>
+        <span class="side-badge hidden" id="sideBadgeCycle">0</span>
+      </div>
+      <div class="side-item hidden" id="sideValidasi" onclick="bukaValidasi()">
+        <span class="ic" style="background:var(--green-bg);">✅</span><span class="side-label"> Validasi Hasil</span>
+        <span class="side-badge hidden" id="sideBadgeValidasi">0</span>
+      </div>
+      <div class="side-item hidden" id="sideTask" onclick="bukaTaskInvestigasi()"><span class="ic" style="background:var(--slate-bg);">🛠️</span><span class="side-label"> Task Investigasi</span></div>
+
+      <div class="side-section-title hidden" id="sideSectionAdmin">Administrator</div>
+      <div class="side-item hidden" id="sideAdmin" onclick="bukaAdmin()"><span class="ic" style="background:var(--blue-bg);">⚙️</span><span class="side-label"> Upload Data</span></div>
+
+      <div class="side-section-title hidden" id="sideSectionLaporan">Laporan</div>
+      <div class="side-item hidden" id="sideDashboard" onclick="bukaSummary()"><span class="ic" style="background:var(--blue-bg);">📊</span><span class="side-label"> Dashboard</span></div>
+    </div>
+
+    <div class="main-pane">
+
+  <!-- SCREEN 0: Login -->
+  <div id="screenLogin" class="screen">
+    <label>Username</label>
+    <input type="text" id="loginUsername" placeholder="Ketik username kamu" autocomplete="off">
+    <button id="btnLogin" onclick="doLogin()">Masuk</button>
+    <div id="loginStatus" class="status-msg status-err"></div>
+  </div>
+
+  <!-- SCREEN HOME -->
+  <div id="screenHome" class="screen hidden">
+    <div class="screen-refresh-row">
+      <button class="btn-refresh" onclick="refreshCurrentScreen_(this, refreshHome_)"><span class="ic-refresh">🔄</span>Refresh</button>
+    </div>
+    <div class="home-header">
+      <div class="home-avatar" id="homeAvatar">?</div>
+      <div>
+        <div class="home-greeting" id="homeGreeting">Halo,</div>
+        <div class="home-username" id="homeUsername">-</div>
+        <div class="home-location" id="homeLocation">RDC Tallo Makassar</div>
+        <div class="home-role-pill" id="homeRolePill">-</div>
+      </div>
+    </div>
+
+    <div class="kpi-row" id="homeKpiRow">
+      <div class="kpi-card">
+        <div class="kpi-value" id="hkTotal">–</div>
+        <div class="kpi-label">Total Cycle</div>
+      </div>
+      <div class="kpi-card hidden" id="hkValidasiCard">
+        <div class="kpi-value" id="hkValidasi" style="color:var(--orange);">–</div>
+        <div class="kpi-label">Belum Validasi</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="hkSelesai" style="color:var(--green);">–</div>
+        <div class="kpi-label">Selesai</div>
+      </div>
+    </div>
+
+    <div class="card hidden" id="prioritasCard" style="text-align:left; margin-top:18px; padding:16px;">
+      <div style="font-weight:700; font-size:15px; margin-bottom:2px;">🎯 Prioritas Hari Ini</div>
+      <div class="hint" style="margin-top:0; margin-bottom:10px;">Task investigasi yang paling butuh perhatian sekarang.</div>
+      <div class="kpi-row" style="margin-top:0;">
+        <div class="kpi-card">
+          <div class="kpi-value" id="phTotalOpen">–</div>
+          <div class="kpi-label">Open</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" id="phCritical" style="color:var(--red);">–</div>
+          <div class="kpi-label">🔴 Critical</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" id="phPendingValidasi" style="color:var(--orange);">–</div>
+          <div class="kpi-label">Pending Validasi</div>
+        </div>
+      </div>
+      <div id="prioritasTaskList" style="margin-top:12px;"></div>
+      <div id="prioritasEmpty" class="hint" style="text-align:center; margin-top:8px;"></div>
+      <button class="secondary hidden" id="btnLihatSemuaTask" style="margin-top:10px;" onclick="bukaTaskInvestigasi()">Lihat Semua Task Investigasi</button>
+    </div>
+
+    <div class="menu-section-title">Menu Utama</div>
+    <button class="home-btn" onclick="bukaCycleTransaksi()">
+      <span class="ic-circle ic-orange">📦</span>
+      <span class="btn-text">Cycle Transaksi<span class="sub">Hitung tugas yang ditugaskan ke Anda</span></span>
+      <span class="btn-badge hidden" id="badgeCycle">0</span>
+    </button>
+    <button class="home-btn hidden" id="btnMenuValidasi" onclick="bukaValidasi()">
+      <span class="ic-circle ic-green">✅</span>
+      <span class="btn-text">Validasi Hasil<span class="sub">Cek ulang item discrepancy (blind)</span></span>
+      <span class="btn-badge hidden" id="badgeValidasi">0</span>
+    </button>
+    <button class="home-btn hidden" id="btnMenuTask" onclick="bukaTaskInvestigasi()">
+      <span class="ic-circle ic-slate">🛠️</span>
+      <span class="btn-text">Task Investigasi<span class="sub">Tindak lanjut discrepancy yang terkonfirmasi</span></span>
+    </button>
+
+    <div class="menu-section-title hidden" id="sectionAdminTitle">Administrator</div>
+    <button class="home-btn hidden" id="btnMenuAdmin" onclick="bukaAdmin()">
+      <span class="ic-circle ic-blue">⚙️</span>
+      <span class="btn-text">Upload Data<span class="sub">Import Data Transaksi & Stock by Date</span></span>
+    </button>
+
+    <div class="menu-section-title hidden" id="sectionLaporanTitle">Laporan</div>
+    <button class="home-btn hidden" id="btnMenuDashboard" onclick="bukaSummary()">
+      <span class="ic-circle ic-blue">📊</span>
+      <span class="btn-text">Dashboard & Ranking<span class="sub">Lihat hasil & ranking akurasi</span></span>
+    </button>
+
+    <button class="link" onclick="logout()">Keluar / Ganti User</button>
+
+    <div class="app-footer">
+      <div class="fu-line">🕒 Terakhir diperbarui: <span id="footerLastUpdated">-</span></div>
+      <div class="fu-version">Cycle Count <span id="footerVersion">-</span></div>
+    </div>
+  </div>
+
+  <!-- SCREEN: Belum ada tugas -->
+  <div id="screenNoTask" class="screen hidden">
+    <div class="card">
+      <div style="font-size:40px;">🗒️</div>
+      <div style="font-weight:700; font-size:18px; margin-top:8px;">Belum ada tugas untuk Anda</div>
+      <div style="color:var(--text-secondary); margin-top:6px;">Cek lagi setelah admin upload & membagi data baru.</div>
+    </div>
+    <button onclick="showScreen('screenHome')">Kembali ke Home</button>
+  </div>
+
+  <!-- SCREEN: Counting -->
+  <div id="screenCount" class="screen hidden">
+    <div class="progress" id="progressText"></div>
+    <div class="card">
+      <div class="article" id="articleText"></div>
+      <div class="lokasi" id="lokasiText"></div>
+      <input type="number" inputmode="numeric" class="qty-input" id="qtyInput" placeholder="Qty hasil hitung">
+      <button id="btnSubmit" onclick="submitItem()">Submit</button>
+      <div id="resultBox"></div>
+    </div>
+    <button class="secondary" onclick="showScreen('screenHome')">Selesai / Kembali ke Home</button>
+  </div>
+
+  <!-- SCREEN: Done -->
+  <div id="screenDone" class="screen hidden">
+    <div class="card">
+      <div style="font-size:40px;">✅</div>
+      <div style="font-weight:700; font-size:18px; margin-top:8px;">Batch selesai dihitung</div>
+      <div style="color:var(--text-secondary); margin-top:6px;">Semua lokasi di batch ini sudah diproses.</div>
+    </div>
+    <button onclick="showScreen('screenHome')">Kembali ke Home</button>
+  </div>
+
+  <!-- SCREEN: Validasi -->
+  <div id="screenValidasi" class="screen hidden">
+    <div class="progress" id="validasiProgressText"></div>
+    <div class="card">
+      <div class="article" id="validasiArticleText"></div>
+      <div class="lokasi" id="validasiLokasiText"></div>
+      <input type="number" inputmode="numeric" class="qty-input" id="validasiQtyInput" placeholder="Qty hasil validasi">
+      <button id="btnValidasiSubmit" onclick="submitValidasiItem()">Submit</button>
+      <div id="validasiResultBox"></div>
+    </div>
+    <button class="secondary" onclick="showScreen('screenHome')">Selesai / Kembali ke Home</button>
+  </div>
+
+  <!-- SCREEN: Validasi kosong -->
+  <div id="screenValidasiDone" class="screen hidden">
+    <div class="card">
+      <div style="font-size:40px;">✅</div>
+      <div style="font-weight:700; font-size:18px; margin-top:8px;">Tidak ada item menunggu validasi</div>
+      <div style="color:var(--text-secondary); margin-top:6px;">Semua discrepancy sudah divalidasi.</div>
+    </div>
+    <button onclick="showScreen('screenHome')">Kembali ke Home</button>
+  </div>
+
+  <!-- SCREEN: Admin - upload data -->
+  <div id="screenAdmin" class="screen hidden">
+    <div class="screen-refresh-row">
+      <button class="btn-refresh" onclick="refreshCurrentScreen_(this, function () { loadAssignableUsers(); loadEquipmentReadyDefaults_(); })"><span class="ic-refresh">🔄</span>Refresh</button>
+    </div>
+    <div class="card" style="text-align:left;">
+      <div style="font-weight:700; font-size:16px; margin-bottom:12px;">Upload Data Cycle Count</div>
+
+      <label>1. File Data Transaksi (raw export, .xlsx/.csv)</label>
+      <input type="file" id="fileTransaksi" accept=".xlsx,.xls,.csv">
+
+      <label>2. File Stock by Date (.xlsx/.csv)</label>
+      <input type="file" id="fileStock" accept=".xlsx,.xls,.csv">
+
+      <label>3. Pilih User yang Bertugas</label>
+      <div class="user-check-toolbar">
+        <span onclick="setAllUserChecks_(true)">Pilih Semua</span>
+        <span onclick="setAllUserChecks_(false)">Kosongkan</span>
+      </div>
+      <div id="userCheckList" class="user-check-list"><div class="hint">Memuat daftar user...</div></div>
+
+      <label>4. Alat Bantu Ready Hari Ini</label>
+      <div class="hint" style="margin-top:0;">Menentukan berapa orang yang bisa kebagian task Level 3-4 (Tangga) & Level 5-6 (Reach Truck). Sisanya otomatis kebagian task Level 1-2 (Bawah). Diambil dari sheet Master (kolom F/G) sebagai default, bisa diubah tiap hari sesuai alat yang benar-benar jalan.</div>
+      <div style="display:flex; gap:10px;">
+        <div style="flex:1;">
+          <label style="font-weight:400;">Reach Truck Ready</label>
+          <input type="number" id="inputReachTruckReady" min="0" value="0">
+        </div>
+        <div style="flex:1;">
+          <label style="font-weight:400;">Tangga Pesawat Ready</label>
+          <input type="number" id="inputTanggaReady" min="0" value="0">
+        </div>
+      </div>
+
+      <button id="btnProses" onclick="prosesData()">Proses & Bagi Task</button>
+      <div id="adminStatus" class="status-msg"></div>
+    </div>
+    <button class="secondary" onclick="showScreen('screenHome')">Kembali</button>
+  </div>
+
+  <!-- SCREEN: Task Investigasi -->
+  <div id="screenTaskInvestigasi" class="screen hidden">
+    <div class="screen-refresh-row">
+      <button class="btn-refresh" onclick="refreshCurrentScreen_(this, function () { loadOpenTasks(); loadTaskLog(); })"><span class="ic-refresh">🔄</span>Refresh</button>
+    </div>
+    <div class="card" style="text-align:left;">
+      <div style="font-weight:700; font-size:16px; margin-bottom:4px;">🛠️ Task Investigasi</div>
+      <div class="hint" style="margin-top:0;">Discrepancy yang sudah terkonfirmasi lewat validasi. Tutup task dengan catatan penyelesaian setelah barang ditemukan / lokasi diperbaiki / stok disesuaikan.</div>
+    </div>
+
+    <div id="openTaskCard" class="card hidden" style="text-align:left;">
+      <div style="font-weight:700; font-size:15px; margin-bottom:10px;">Open (<span id="openTaskCount">0</span>)</div>
+      <input type="text" id="openTaskSearch" class="search-box" placeholder="🔍 Cari lokasi, SKU, PIC, atau status..." oninput="filterOpenTaskList()">
+      <div id="openTaskList"></div>
+    </div>
+    <div id="openTaskEmpty" class="hint" style="text-align:center; margin-top:10px;"></div>
+
+    <div class="divider">Riwayat Log</div>
+    <div id="taskLogCard" class="card hidden" style="text-align:left;">
+      <div id="taskLogList"></div>
+    </div>
+
+    <button class="secondary" onclick="showScreen('screenHome')">Kembali</button>
+  </div>
+
+  <!-- SCREEN: Summary & Ranking -->
+  <div id="screenSummary" class="screen hidden">
+    <div class="screen-refresh-row">
+      <button class="btn-refresh" onclick="refreshCurrentScreen_(this, function () { loadSummary(); loadBacklog(); })"><span class="ic-refresh">🔄</span>Refresh</button>
+    </div>
+    <div class="dash-toolbar" id="dashToolbar">
+      <div class="dash-toolbar-fields">
+    <div style="display:flex; gap:8px; margin-top:4px;">
+      <button id="btnModeDaily" onclick="setSummaryMode('daily')" style="margin-top:0;">Harian</button>
+      <button id="btnModeMonthly" class="secondary" onclick="setSummaryMode('monthly')" style="margin-top:0;">Bulanan</button>
+    </div>
+
+    <label id="summaryDateLabel">Tanggal</label>
+    <input type="date" id="summaryDate">
+    <input type="month" id="summaryMonth" class="hidden">
+    <button id="btnLihatSummary" onclick="loadSummary()">Tampilkan</button>
+    <button id="btnExportExcel" class="secondary hidden" onclick="exportDashboardExcel()">⬇️ Export Excel</button>
+      </div>
+      <button type="button" class="filter-collapse-btn" id="btnFilterCollapse" onclick="toggleFilterCollapse()" title="Sembunyikan filter">▲</button>
+    </div>
+
+    <div id="kpiRow" class="kpi-row hidden">
+      <div class="kpi-card">
+        <div class="kpi-value" id="kpiAkurasi" style="color:var(--primary);">0%</div>
+        <div class="kpi-label">% Accuracy</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="kpiTotal">0</div>
+        <div class="kpi-label">Total Transaksi Count</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="kpiHit" style="color:var(--green);">0</div>
+        <div class="kpi-label">HIT</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-value" id="kpiDisc" style="color:var(--red);">0</div>
+        <div class="kpi-label">Discrepancy</div>
+      </div>
+    </div>
+
+    <div class="dash-grid" id="dashGrid">
+    <div id="backlogCard" class="card hidden" style="text-align:left;">
+      <div style="font-weight:700; font-size:15px; margin-bottom:2px;">⏳ Outstanding Cycle</div>
+      <div class="hint" style="margin-top:0; margin-bottom:10px;">Klik tanggal untuk lihat siapa yang belum selesai & berapa sisa tugasnya.</div>
+      <div id="backlogList"></div>
+    </div>
+
+    <div id="leaderboardCard" class="card hidden" style="text-align:left;">
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <button id="btnLbTabPetugas" onclick="setLeaderboardTab('petugas')" style="margin-top:0;">🏆 Ranking Akurasi</button>
+        <button id="btnLbTabValidator" class="secondary" onclick="setLeaderboardTab('validator')" style="margin-top:0;">🛡️ Ranking Validator</button>
+      </div>
+      <div id="lbPanelPetugas">
+        <div class="hint" style="margin-top:-6px; margin-bottom:10px;">Klik nama untuk lihat ringkasan.</div>
+        <div class="lb-scroll-box" id="leaderboardList"></div>
+      </div>
+      <div id="lbPanelValidator" class="hidden">
+        <div class="hint" style="margin-top:-6px; margin-bottom:10px;">Akurasi validator saat blind recount -- dihitung dari item yang task investigasinya sudah Selesai. "Salah" berarti ketahuan saat investigasi bahwa validator yang salah hitung, bukan discrepancy nyata.</div>
+        <div class="lb-scroll-box" id="leaderboardValidatorList"></div>
+        <div class="hint" id="leaderboardValidatorEmpty" style="text-align:center; margin-top:10px;"></div>
+      </div>
+    </div>
+
+    <div id="userDetailCard" class="card hidden" style="text-align:left;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div style="font-weight:700; font-size:15px;" id="userDetailName">Ringkasan User</div>
+        <button class="link" style="margin:0; padding:2px 6px; width:auto;" onclick="closeUserDetail()">Tutup ✕</button>
+      </div>
+      <div class="kpi-row" style="margin-top:0;">
+        <div class="kpi-card">
+          <div class="kpi-value" id="udTotal">0</div>
+          <div class="kpi-label">Total Item</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" id="udDisc" style="color:var(--red);">0</div>
+          <div class="kpi-label">Kesalahan Hitung</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" id="udAkurasi" style="color:var(--green);">0%</div>
+          <div class="kpi-label">Akurasi</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value" id="udDiscPct" style="color:var(--red);">0%</div>
+          <div class="kpi-label">% Discrepancy</div>
+        </div>
+      </div>
+      <div id="udInvestigasiSection" class="hidden" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--border);">
+        <div style="font-weight:700; font-size:14px; margin-bottom:8px;">🛠️ Task Investigasi Diselesaikan</div>
+        <div class="kpi-row" style="margin-top:0;">
+          <div class="kpi-card">
+            <div class="kpi-value" id="udTaskSelesai">0</div>
+            <div class="kpi-label">Task Selesai</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-value" id="udAvgDurasi" style="color:var(--primary);">0j</div>
+            <div class="kpi-label">Rata2 Waktu Buka→Tutup</div>
+          </div>
+        </div>
+        <div class="hint" style="margin-top:8px; margin-bottom:0;">⚠️ Durasi ini dihitung dari task dibuka sampai ditutup, termasuk waktu antri — bukan waktu kerja aktif murni. Jangan dipakai sebagai satu-satunya ukuran kecepatan individu.</div>
+      </div>
+    </div>
+
+    <div id="errorAnalysisCard" class="card hidden" style="text-align:left;">
+      <div style="font-weight:700; font-size:15px; margin-bottom:10px;">🔍 Analisis Kesalahan</div>
+      <div class="hint" style="margin-top:-6px; margin-bottom:12px;">Persentase discrepancy final berdasarkan kategori penyebab, pada periode ini.</div>
+      <div id="errorAnalysisList"></div>
+    </div>
+
+    <div id="trendCard" class="card hidden trend-card-v2" style="text-align:left;">
+      <div class="trend-card-head">
+        <div>
+          <div class="trend-card-title">📈 Tren Akurasi &amp; Discrepancy (7 Hari)</div>
+          <div class="hint" id="trendSubtitle" style="margin:2px 0 0;">7 hari terakhir</div>
+        </div>
+        <div class="trend-legend">
+          <span><span class="trend-legend-dot" style="background:#3498db;"></span>Hit</span>
+          <span><span class="trend-legend-dot trend-legend-dot-sq" style="background:#e67e22;"></span>Discrepancy</span>
+          <span><span class="trend-legend-dot" style="background:#3b3838;"></span>% Accuracy</span>
+        </div>
+      </div>
+
+      <div class="trend-body-v2">
+        <div class="trend-chart-wrap" id="trendChartWrap">
+          <svg id="trendSvg" class="trend-svg" viewBox="0 0 700 190"></svg>
+          <div class="trend-tooltip" id="trendTooltip"></div>
+        </div>
+        <div class="trend-summary-v2">
+          <div class="trend-summary-item">
+            <div class="trend-summary-label">Rata-rata Accuracy</div>
+            <div class="trend-summary-value" id="trendAvgAkurasi" style="color:#3b3838;">-</div>
+          </div>
+          <div class="trend-summary-item">
+            <div class="trend-summary-label">Total Discrepancy</div>
+            <div class="trend-summary-value" id="trendTotalDisc" style="color:#e67e22;">-</div>
+          </div>
+          <div class="trend-summary-item">
+            <div class="trend-summary-label">vs Periode Sebelumnya</div>
+            <div class="trend-summary-value" id="trendChange">-</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="trend-insight-box" id="trendInsightBox"></div>
+    </div>
+
+    <div id="locationsCard" class="card hidden" style="text-align:left;">
+      <div style="font-weight:700; font-size:15px; margin-bottom:10px;">📍 Lokasi Bermasalah</div>
+      <div class="hint" style="margin-top:-6px; margin-bottom:12px;">Lokasi dengan jumlah discrepancy final terbanyak pada periode ini.</div>
+      <div id="locationsList"></div>
+    </div>
+
+    <div id="skuCard" class="card hidden" style="text-align:left;">
+      <div style="font-weight:700; font-size:15px; margin-bottom:10px;">📦 SKU Bermasalah</div>
+      <div class="hint" style="margin-top:-6px; margin-bottom:12px;">Article dengan jumlah discrepancy final terbanyak pada periode ini.</div>
+      <div id="skuList"></div>
+    </div>
+
+    <div id="detailCard" class="card hidden" style="text-align:left;">
+      <div class="detail-card-header">
+        <div class="detail-card-title">🧩 Detail Item Bermasalah</div>
+        <button type="button" class="density-toggle-btn" id="btnDensityToggle" onclick="toggleDensityMode()" title="Compact Density Mode">▤ Compact</button>
+      </div>
+      <input type="text" id="detailSearch" class="search-box" placeholder="🔍 Cari lokasi, SKU, deskripsi, atau nama..." oninput="filterDetailList()">
+      <div class="table-scroll-box">
+        <div class="problem-table-header">
+          <span class="p-lokasi">Lokasi</span><span class="p-sku">SKU</span><span>Deskripsi</span><span>Qty Discrepancy</span><span>User</span><span>Status</span>
+        </div>
+        <div id="detailList"></div>
+      </div>
+      <div id="detailEmpty" class="hint" style="text-align:center; margin-top:10px;"></div>
+    </div>
+    </div><!-- /dash-grid -->
+
+    <div id="summaryEmpty" class="hint" style="text-align:center; margin-top:16px;"></div>
+    <button class="secondary" onclick="showScreen('screenHome')">Kembali</button>
+  </div>
+
