@@ -18,10 +18,10 @@
 
 <script>
 async function loadBody() {
-    const html = await fetch("components/body1.html")
-        .then(r => r.text());
+    const body1 = await fetch("components/body1.html").then(r => r.text());
+    const body2 = await fetch("components/body2.html").then(r => r.text());
 
-    document.getElementById("app").innerHTML = html;
+    document.getElementById("app").innerHTML = body1 + body2;
 }
 
 loadBody();
