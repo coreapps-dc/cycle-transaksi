@@ -13,26 +13,55 @@
 
 <body>
 
-  <!-- Body1.html -->
   <div id="app"></div>
 
-<script>
-async function loadBody() {
-    const body1 = await fetch("components/body1.html").then(r => r.text());
-    const body2 = await fetch("components/body2.html").then(r => r.text());
+  <script>
+    async function loadComponent(path) {
+      const response = await fetch(path);
 
-    document.getElementById("app").innerHTML = body1 + body2;
-}
+      if (!response.ok) {
+        throw new Error(`Gagal memuat ${path}`);
+      }
 
-loadBody();
-</script>
+      return await response.text();
+    }
 
-  <script src="js/core.js"></script>
-  <script src="js/cycle-validasi.js"></script>
-  <script src="js/admin.js"></script>
-  <script src="js/dashboard.js"></script>
-  <script src="js/task-investigasi.js"></script>
-  <script src="js/misc.js"></script>
+    async function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement("script");
+        script.src = src;
+
+        script.onload = resolve;
+        script.onerror = () => reject(new Error(`Gagal memuat ${src}`));
+
+        document.body.appendChild(script);
+      });
+    }
+
+    async function init() {
+      try {
+
+        // Load HTML terlebih dahulu
+        const body1 = await loadComponent("components/body1.html");
+        const body2 = await loadComponent("components/body2.html");
+
+        document.getElementById("app").innerHTML = body1 + body2;
+
+        // Baru load semua JavaScript
+        await loadScript("js/core.js");
+        await loadScript("js/cycle-validasi.js");
+        await loadScript("js/admin.js");
+        await loadScript("js/dashboard.js");
+        await loadScript("js/task-investigasi.js");
+        await loadScript("js/misc.js");
+
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    init();
+  </script>
 
 </body>
 </html>
