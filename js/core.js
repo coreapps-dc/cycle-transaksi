@@ -1,4 +1,3 @@
-<script>
     let currentUser = null;
     let items = [];
     let currentIndex = 0;
