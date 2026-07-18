@@ -4,7 +4,7 @@
 // ======================================================
 
 // Ganti dengan URL Web App Apps Script nanti
-const API_URL = "";
+const API_URL = "https://script.google.com/a/macros/kawanlamacorp.com/s/AKfycbx3uW7Tte0Wv8duWUl39cej1Zc_A9fYKw6IuPp3b-yZf-_Q0m6lBAs2TLFRVEfdRt5laA/exec";
 
 // Helper request
 async function request(action, data = {}) {
