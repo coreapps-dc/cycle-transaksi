@@ -1,482 +1,473 @@
-    // ---------- Summary & Ranking ----------
+// ---------- Summary & Ranking ----------
 
-    let summaryMode = 'daily';
-    // FASE 6: cache data dashboard yang lagi ditampilkan, dipakai exportDashboardExcel() --
-    // tidak query ulang ke server, cukup pakai data yang sudah di-render di layar.
-    let lastDashboardExport = { periodLabel: '', leaderboard: [], locations: [], sku: [] };
+let summaryMode = 'daily';
+// FASE 6: cache data dashboard yang lagi ditampilkan, dipakai exportDashboardExcel() --
+// tidak query ulang ke server, cukup pakai data yang sudah di-render di layar.
+let lastDashboardExport = { periodLabel: '', leaderboard: [], locations: [], sku: [] };
 
-    function bukaSummary() {
-      if (!requireLogin_(['admin'])) return;
-      const today = new Date();
-      const iso = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
-      el('summaryDate').value = iso;
-      el('summaryMonth').value = iso.substring(0, 7);
-      el('leaderboardCard').classList.add('hidden');
-      el('detailCard').classList.add('hidden');
-      el('backlogCard').classList.add('hidden');
-      el('userDetailCard').classList.add('hidden');
-      el('errorAnalysisCard').classList.add('hidden');
-      el('trendCard').classList.add('hidden');
-      el('locationsCard').classList.add('hidden');
-      el('skuCard').classList.add('hidden');
-      el('summaryEmpty').textContent = '';
-      setSummaryMode('daily');
-      showScreen('screenSummary');
-      loadBacklog();
-    }
+function bukaSummary() {
+  if (!requireLogin_(['admin'])) return;
+  const today = new Date();
+  const iso = today.getFullYear() + '-' + String(today.getMonth() + 1).padStart(2, '0') + '-' + String(today.getDate()).padStart(2, '0');
+  el('summaryDate').value = iso;
+  el('summaryMonth').value = iso.substring(0, 7);
+  el('leaderboardCard').classList.add('hidden');
+  el('detailCard').classList.add('hidden');
+  el('backlogCard').classList.add('hidden');
+  el('userDetailCard').classList.add('hidden');
+  el('errorAnalysisCard').classList.add('hidden');
+  el('trendCard').classList.add('hidden');
+  el('locationsCard').classList.add('hidden');
+  el('skuCard').classList.add('hidden');
+  el('summaryEmpty').textContent = '';
+  setSummaryMode('daily');
+  showScreen('screenSummary');
+  loadBacklog();
+}
 
-    function setSummaryMode(mode) {
-      summaryMode = mode;
-      el('btnModeDaily').className = mode === 'daily' ? '' : 'secondary';
-      el('btnModeMonthly').className = mode === 'monthly' ? '' : 'secondary';
-      el('summaryDate').classList.toggle('hidden', mode !== 'daily');
-      el('summaryMonth').classList.toggle('hidden', mode !== 'monthly');
-      el('summaryDateLabel').textContent = mode === 'daily' ? 'Tanggal' : 'Bulan';
-      loadSummary();
-    }
+function setSummaryMode(mode) {
+  summaryMode = mode;
+  el('btnModeDaily').className = mode === 'daily' ? '' : 'secondary';
+  el('btnModeMonthly').className = mode === 'monthly' ? '' : 'secondary';
+  el('summaryDate').classList.toggle('hidden', mode !== 'daily');
+  el('summaryMonth').classList.toggle('hidden', mode !== 'monthly');
+  el('summaryDateLabel').textContent = mode === 'daily' ? 'Tanggal' : 'Bulan';
+  loadSummary();
+}
 
-    function loadSummary() {
-      const periodValue = summaryMode === 'daily' ? el('summaryDate').value : el('summaryMonth').value;
-      if (!periodValue) return;
+function loadSummary() {
+  const periodValue = summaryMode === 'daily' ? el('summaryDate').value : el('summaryMonth').value;
+  if (!periodValue) return;
 
-      lastDashboardExport.periodLabel = periodValue;
-      closeUserDetail();
-      el('btnLihatSummary').disabled = true;
-      el('btnLihatSummary').textContent = 'Memuat...';
+  lastDashboardExport.periodLabel = periodValue;
+  closeUserDetail();
+  el('btnLihatSummary').disabled = true;
+  el('btnLihatSummary').textContent = 'Memuat...';
 
-      google.script.run
-        .withSuccessHandler(function (res) {
-          el('btnLihatSummary').disabled = false;
-          el('btnLihatSummary').textContent = 'Tampilkan';
-          renderSummary(res);
-        })
-        .withFailureHandler(function (err) {
-          el('btnLihatSummary').disabled = false;
-          el('btnLihatSummary').textContent = 'Tampilkan';
-          onServerError_(err);
-        })
-        .getSummaryByPeriod(summaryMode, periodValue, currentUser.username);
-
-      loadErrorAnalysis(periodValue);
-      loadTopProblems(periodValue);
-      loadTrend();
-    }
-
-    // Cache data terakhir dari server supaya chart bisa digambar ulang (redraw) tanpa query ulang,
-    // misalnya saat window di-resize atau sidebar/workspace mode di-toggle (lebar container berubah).
-    let lastTrendData = [];
-
-    function loadTrend() {
-      const count = summaryMode === 'monthly' ? 6 : 7;
-      google.script.run
-        .withSuccessHandler(function (list) {
-          lastTrendData = list || [];
-          renderTrendChart_(lastTrendData);
-        })
-        .withFailureHandler(function () { el('trendCard').classList.add('hidden'); })
-        .getTrendData(summaryMode, count, currentUser.username);
-    }
-
-    function redrawTrendChartIfVisible_() {
-      const card = el('trendCard');
-      if (card && !card.classList.contains('hidden') && lastTrendData.length) {
-        renderTrendChart_(lastTrendData);
-      }
-    }
-
-    let trendResizeTimer_ = null;
-    window.addEventListener('resize', function () {
-      clearTimeout(trendResizeTimer_);
-      trendResizeTimer_ = setTimeout(redrawTrendChartIfVisible_, 150);
+  api.getSummaryByPeriod(summaryMode, periodValue, currentUser.username)
+    .then(function (res) {
+      el('btnLihatSummary').disabled = false;
+      el('btnLihatSummary').textContent = 'Tampilkan';
+      renderSummary(res);
+    })
+    .catch(function (err) {
+      el('btnLihatSummary').disabled = false;
+      el('btnLihatSummary').textContent = 'Tampilkan';
+      onServerError_(err);
     });
 
-    function formatTrendLabel_(period, mode) {
-      const bulan = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
-      const parts = period.split('-');
-      if (mode === 'monthly') {
-        return bulan[parseInt(parts[1], 10) - 1] + ' ' + parts[0].substring(2); // "Jul 26"
-      }
-      return parseInt(parts[2], 10) + ' ' + bulan[parseInt(parts[1], 10) - 1]; // "11 Jul"
+  loadErrorAnalysis(periodValue);
+  loadTopProblems(periodValue);
+  loadTrend();
+}
+
+// Cache data terakhir dari server supaya chart bisa digambar ulang (redraw) tanpa query ulang,
+// misalnya saat window di-resize atau sidebar/workspace mode di-toggle (lebar container berubah).
+let lastTrendData = [];
+
+function loadTrend() {
+  const count = summaryMode === 'monthly' ? 6 : 7;
+  api.getTrendData(summaryMode, count, currentUser.username)
+    .then(function (list) {
+      lastTrendData = list || [];
+      renderTrendChart_(lastTrendData);
+    })
+    .catch(function () { el('trendCard').classList.add('hidden'); });
+}
+
+function redrawTrendChartIfVisible_() {
+  const card = el('trendCard');
+  if (card && !card.classList.contains('hidden') && lastTrendData.length) {
+    renderTrendChart_(lastTrendData);
+  }
+}
+
+let trendResizeTimer_ = null;
+window.addEventListener('resize', function () {
+  clearTimeout(trendResizeTimer_);
+  trendResizeTimer_ = setTimeout(redrawTrendChartIfVisible_, 150);
+});
+
+function formatTrendLabel_(period, mode) {
+  const bulan = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  const parts = period.split('-');
+  if (mode === 'monthly') {
+    return bulan[parseInt(parts[1], 10) - 1] + ' ' + parts[0].substring(2); // "Jul 26"
+  }
+  return parseInt(parts[2], 10) + ' ' + bulan[parseInt(parts[1], 10) - 1]; // "11 Jul"
+}
+
+function renderTrendChart_(list) {
+  const card = el('trendCard');
+  const svg = el('trendSvg');
+  const subtitleEl = el('trendSubtitle');
+  const tooltip = el('trendTooltip');
+  if (!list || !list.length) { card.classList.add('hidden'); return; }
+
+  subtitleEl.textContent = summaryMode === 'monthly' ? '6 bulan terakhir' : '7 hari terakhir';
+  // Card harus terlihat DULU sebelum ukur lebar container, supaya clientWidth tidak 0 (display:none).
+  card.classList.remove('hidden');
+
+  const chartWrap = el('trendChartWrap');
+  const n = list.length;
+  // FIX: sebelumnya viewBox lebar-nya di-hardcode 700 lalu di-stretch paksa (preserveAspectRatio=none)
+  // ke lebar container asli yang jauh lebih besar -- itu yang bikin bar/titik keliatan gepeng/oval.
+  // Sekarang viewBox diukur dari lebar asli container tiap kali render, jadi skalanya selalu 1:1 (tidak distorsi).
+  const W = Math.max(chartWrap.clientWidth || 0, 320);
+  const H = 190;
+  const x0 = 10, x1 = W - 10, y0 = 28, y1 = H - 34;
+  const colW = (x1 - x0) / n;
+
+  const validDays = [];
+  list.forEach(function (p) { if (p.total > 0) validDays.push(p); });
+
+  let maxCount = 1;
+  list.forEach(function (p) {
+    if (p.hit > maxCount) maxCount = p.hit;
+    if (p.discrepancy > maxCount) maxCount = p.discrepancy;
+  });
+
+  function cx(i) { return x0 + colW * (i + 0.5); }
+  function barY(v) { return y1 - (v / maxCount) * (y1 - y0); }
+  function lineY(akurasi) { return y1 - (akurasi / 100) * (y1 - y0); }
+
+  // Garis bantu skala accuracy (0% / 50% / 100%) -- referensi visual, bukan data baru.
+  let gridHtml = '';
+  [0, 50, 100].forEach(function (pct) {
+    const gy = lineY(pct);
+    gridHtml += '<line x1="' + x0 + '" y1="' + gy + '" x2="' + x1 + '" y2="' + gy +
+      '" stroke="var(--border)" stroke-width="1" stroke-dasharray="3,3"></line>' +
+      '<text x="' + x0 + '" y="' + (gy - 3) + '" font-size="8" fill="var(--text-secondary)">' + pct + '%</text>';
+  });
+
+  // Bar Hit (biru) + Bar Discrepancy (oranye), berdampingan per periode, dengan label angka di
+  // atas tiap bar. Hari tanpa data (total=0) sengaja TIDAK digambar batangnya sama sekali.
+  const groupW = Math.min(colW * 0.6, 56);
+  const gap = 4;
+  const barW = Math.max((groupW - gap) / 2, 5);
+  let barsHtml = '';
+  let barLabelsHtml = '';
+  list.forEach(function (p, i) {
+    if (p.total <= 0) return;
+    const groupLeft = cx(i) - groupW / 2;
+
+    const hitY = barY(p.hit);
+    const hitH = y1 - hitY;
+    if (hitH > 0.5) {
+      barsHtml += '<rect x="' + groupLeft + '" y="' + hitY + '" width="' + barW + '" height="' + hitH + '" rx="2" fill="#3498db"></rect>';
+    }
+    if (p.hit > 0) {
+      barLabelsHtml += '<text x="' + (groupLeft + barW / 2) + '" y="' + (hitY - 4) + '" font-size="9" font-weight="700" text-anchor="middle" fill="#3498db">' + p.hit + '</text>';
     }
 
-    function renderTrendChart_(list) {
-      const card = el('trendCard');
-      const svg = el('trendSvg');
-      const subtitleEl = el('trendSubtitle');
-      const tooltip = el('trendTooltip');
-      if (!list || !list.length) { card.classList.add('hidden'); return; }
-
-      subtitleEl.textContent = summaryMode === 'monthly' ? '6 bulan terakhir' : '7 hari terakhir';
-      // Card harus terlihat DULU sebelum ukur lebar container, supaya clientWidth tidak 0 (display:none).
-      card.classList.remove('hidden');
-
-      const chartWrap = el('trendChartWrap');
-      const n = list.length;
-      // FIX: sebelumnya viewBox lebar-nya di-hardcode 700 lalu di-stretch paksa (preserveAspectRatio=none)
-      // ke lebar container asli yang jauh lebih besar -- itu yang bikin bar/titik keliatan gepeng/oval.
-      // Sekarang viewBox diukur dari lebar asli container tiap kali render, jadi skalanya selalu 1:1 (tidak distorsi).
-      const W = Math.max(chartWrap.clientWidth || 0, 320);
-      const H = 190;
-      const x0 = 10, x1 = W - 10, y0 = 28, y1 = H - 34;
-      const colW = (x1 - x0) / n;
-
-      const validDays = [];
-      list.forEach(function (p) { if (p.total > 0) validDays.push(p); });
-
-      let maxCount = 1;
-      list.forEach(function (p) {
-        if (p.hit > maxCount) maxCount = p.hit;
-        if (p.discrepancy > maxCount) maxCount = p.discrepancy;
-      });
-
-      function cx(i) { return x0 + colW * (i + 0.5); }
-      function barY(v) { return y1 - (v / maxCount) * (y1 - y0); }
-      function lineY(akurasi) { return y1 - (akurasi / 100) * (y1 - y0); }
-
-      // Garis bantu skala accuracy (0% / 50% / 100%) -- referensi visual, bukan data baru.
-      let gridHtml = '';
-      [0, 50, 100].forEach(function (pct) {
-        const gy = lineY(pct);
-        gridHtml += '<line x1="' + x0 + '" y1="' + gy + '" x2="' + x1 + '" y2="' + gy +
-          '" stroke="var(--border)" stroke-width="1" stroke-dasharray="3,3"></line>' +
-          '<text x="' + x0 + '" y="' + (gy - 3) + '" font-size="8" fill="var(--text-secondary)">' + pct + '%</text>';
-      });
-
-      // Bar Hit (biru) + Bar Discrepancy (oranye), berdampingan per periode, dengan label angka di
-      // atas tiap bar. Hari tanpa data (total=0) sengaja TIDAK digambar batangnya sama sekali.
-      const groupW = Math.min(colW * 0.6, 56);
-      const gap = 4;
-      const barW = Math.max((groupW - gap) / 2, 5);
-      let barsHtml = '';
-      let barLabelsHtml = '';
-      list.forEach(function (p, i) {
-        if (p.total <= 0) return;
-        const groupLeft = cx(i) - groupW / 2;
-
-        const hitY = barY(p.hit);
-        const hitH = y1 - hitY;
-        if (hitH > 0.5) {
-          barsHtml += '<rect x="' + groupLeft + '" y="' + hitY + '" width="' + barW + '" height="' + hitH + '" rx="2" fill="#3498db"></rect>';
-        }
-        if (p.hit > 0) {
-          barLabelsHtml += '<text x="' + (groupLeft + barW / 2) + '" y="' + (hitY - 4) + '" font-size="9" font-weight="700" text-anchor="middle" fill="#3498db">' + p.hit + '</text>';
-        }
-
-        const discX = groupLeft + barW + gap;
-        const discY = barY(p.discrepancy);
-        const discH = y1 - discY;
-        if (discH > 0.5) {
-          barsHtml += '<rect x="' + discX + '" y="' + discY + '" width="' + barW + '" height="' + discH + '" rx="2" fill="#e67e22"></rect>';
-        }
-        if (p.discrepancy > 0) {
-          barLabelsHtml += '<text x="' + (discX + barW / 2) + '" y="' + (discY - 4) + '" font-size="9" font-weight="700" text-anchor="middle" fill="#e67e22">' + p.discrepancy + '</text>';
-        }
-      });
-
-      // Line Accuracy (gelap #3b3838) -- putus (tidak disambung) melewati hari yang tidak ada data,
-      // dengan label persen di setiap titik.
-      let pathD = '';
-      let drawing = false;
-      let pointsHtml = '';
-      let lineLabelsHtml = '';
-      list.forEach(function (p, i) {
-        if (p.total <= 0) { drawing = false; return; }
-        const x = cx(i), y = lineY(p.akurasi);
-        pathD += (drawing ? ' L ' : ' M ') + x + ' ' + y;
-        drawing = true;
-        pointsHtml += '<circle cx="' + x + '" cy="' + y + '" r="3.4" fill="#3b3838" stroke="#fff" stroke-width="1.2"></circle>';
-        lineLabelsHtml += '<text x="' + x + '" y="' + (y - 9) + '" font-size="9.5" font-weight="700" text-anchor="middle" fill="#3b3838">' + p.akurasi + '%</text>';
-      });
-      const lineHtml = pathD ? '<path d="' + pathD.trim() + '" fill="none" stroke="#3b3838" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>' : '';
-
-      // Label sumbu-X + tanda "no data" (dash tipis) untuk hari kosong -- bukan batang abu-abu lagi.
-      let labelsHtml = '';
-      let noDataHtml = '';
-      list.forEach(function (p, i) {
-        labelsHtml += '<text x="' + cx(i) + '" y="' + (H - 12) + '" font-size="9" text-anchor="middle" fill="var(--text-secondary)">' +
-          escapeHtml(formatTrendLabel_(p.period, summaryMode)) + '</text>';
-        if (p.total <= 0) {
-          noDataHtml += '<text x="' + cx(i) + '" y="' + (y1 - 6) + '" font-size="9" text-anchor="middle" fill="var(--text-secondary)" opacity="0.5">–</text>';
-        }
-      });
-
-      // Area transparan per kolom untuk tooltip hover (tanggal, accuracy, hit, discrepancy).
-      let hoverHtml = '';
-      list.forEach(function (p, i) {
-        hoverHtml += '<rect class="trend-hover-rect" data-idx="' + i + '" x="' + (x0 + colW * i) + '" y="0' +
-          '" width="' + colW + '" height="' + H + '" fill="transparent"></rect>';
-      });
-
-      svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
-      svg.innerHTML = gridHtml + barsHtml + lineHtml + pointsHtml + barLabelsHtml + lineLabelsHtml + noDataHtml + labelsHtml + hoverHtml;
-
-      const hoverRects = svg.querySelectorAll('.trend-hover-rect');
-      hoverRects.forEach(function (rectEl) {
-        rectEl.addEventListener('mouseenter', function () { showTrendTooltip_(list[+rectEl.dataset.idx], rectEl, chartWrap, tooltip); });
-        rectEl.addEventListener('mousemove', function () { showTrendTooltip_(list[+rectEl.dataset.idx], rectEl, chartWrap, tooltip); });
-        rectEl.addEventListener('mouseleave', function () { tooltip.classList.remove('show'); });
-      });
-
-      renderTrendSummary_(list, validDays);
+    const discX = groupLeft + barW + gap;
+    const discY = barY(p.discrepancy);
+    const discH = y1 - discY;
+    if (discH > 0.5) {
+      barsHtml += '<rect x="' + discX + '" y="' + discY + '" width="' + barW + '" height="' + discH + '" rx="2" fill="#e67e22"></rect>';
     }
-
-    function showTrendTooltip_(p, rectEl, chartWrap, tooltip) {
-      const label = escapeHtml(formatTrendLabel_(p.period, summaryMode));
-      if (p.total <= 0) {
-        tooltip.innerHTML = '<b>' + label + '</b><br>Tidak ada data';
-      } else {
-        tooltip.innerHTML = '<b>' + label + '</b><br>Accuracy: ' + p.akurasi + '%<br>Hit: ' + p.hit + '<br>Discrepancy: ' + p.discrepancy;
-      }
-      const rectBox = rectEl.getBoundingClientRect();
-      const wrapBox = chartWrap.getBoundingClientRect();
-      tooltip.style.left = (rectBox.left - wrapBox.left + rectBox.width / 2) + 'px';
-      tooltip.style.top = (rectBox.top - wrapBox.top) + 'px';
-      tooltip.classList.add('show');
+    if (p.discrepancy > 0) {
+      barLabelsHtml += '<text x="' + (discX + barW / 2) + '" y="' + (discY - 4) + '" font-size="9" font-weight="700" text-anchor="middle" fill="#e67e22">' + p.discrepancy + '</text>';
     }
+  });
 
-    // Ringkasan singkat + insight otomatis -- murni diturunkan dari data trend yang sudah ada
-    // (tidak ada query/hitungan baru ke server).
-    function renderTrendSummary_(list, validDays) {
-      const avgEl = el('trendAvgAkurasi');
-      const totalDiscEl = el('trendTotalDisc');
-      const changeEl = el('trendChange');
-      const insightEl = el('trendInsightBox');
+  // Line Accuracy (gelap #3b3838) -- putus (tidak disambung) melewati hari yang tidak ada data,
+  // dengan label persen di setiap titik.
+  let pathD = '';
+  let drawing = false;
+  let pointsHtml = '';
+  let lineLabelsHtml = '';
+  list.forEach(function (p, i) {
+    if (p.total <= 0) { drawing = false; return; }
+    const x = cx(i), y = lineY(p.akurasi);
+    pathD += (drawing ? ' L ' : ' M ') + x + ' ' + y;
+    drawing = true;
+    pointsHtml += '<circle cx="' + x + '" cy="' + y + '" r="3.4" fill="#3b3838" stroke="#fff" stroke-width="1.2"></circle>';
+    lineLabelsHtml += '<text x="' + x + '" y="' + (y - 9) + '" font-size="9.5" font-weight="700" text-anchor="middle" fill="#3b3838">' + p.akurasi + '%</text>';
+  });
+  const lineHtml = pathD ? '<path d="' + pathD.trim() + '" fill="none" stroke="#3b3838" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>' : '';
 
-      let totalDisc = 0;
-      list.forEach(function (p) { totalDisc += p.discrepancy; });
-      totalDiscEl.textContent = totalDisc;
-
-      if (!validDays.length) {
-        avgEl.textContent = '-';
-        changeEl.textContent = '-';
-        insightEl.innerHTML = '<div class="trend-insight-line">Belum ada data pada periode ini.</div>';
-        return;
-      }
-
-      let sumAkurasi = 0;
-      validDays.forEach(function (p) { sumAkurasi += p.akurasi; });
-      const avgAkurasi = Math.round((sumAkurasi / validDays.length) * 10) / 10;
-      avgEl.textContent = avgAkurasi + '%';
-
-      let changeHtml = '-';
-      let trendLine = '';
-      if (validDays.length >= 2) {
-        const last = validDays[validDays.length - 1];
-        const prev = validDays[validDays.length - 2];
-        const delta = Math.round((last.akurasi - prev.akurasi) * 10) / 10;
-        if (delta > 0) {
-          changeHtml = '<span style="color:var(--green);">▲ ' + delta + ' pt</span>';
-          trendLine = '💡 Accuracy meningkat ' + delta + ' pt dibanding periode sebelumnya.';
-        } else if (delta < 0) {
-          changeHtml = '<span style="color:var(--red);">▼ ' + Math.abs(delta) + ' pt</span>';
-          trendLine = '💡 Accuracy menurun ' + Math.abs(delta) + ' pt dibanding periode sebelumnya.';
-        } else {
-          changeHtml = '<span style="color:var(--text-secondary);">▬ 0 pt</span>';
-          trendLine = '💡 Accuracy stabil dibanding periode sebelumnya.';
-        }
-      }
-      changeEl.innerHTML = changeHtml;
-
-      let discLine = '';
-      let maxDiscDay = null;
-      list.forEach(function (p) { if (!maxDiscDay || p.discrepancy > maxDiscDay.discrepancy) maxDiscDay = p; });
-      if (maxDiscDay && maxDiscDay.discrepancy > 0) {
-        discLine = '📌 Discrepancy tertinggi terjadi pada ' + escapeHtml(formatTrendLabel_(maxDiscDay.period, summaryMode)) +
-          ' (' + maxDiscDay.discrepancy + ' item).';
-      }
-
-      insightEl.innerHTML =
-        (trendLine ? '<div class="trend-insight-line">' + trendLine + '</div>' : '') +
-        (discLine ? '<div class="trend-insight-line">' + discLine + '</div>' : '');
+  // Label sumbu-X + tanda "no data" (dash tipis) untuk hari kosong -- bukan batang abu-abu lagi.
+  let labelsHtml = '';
+  let noDataHtml = '';
+  list.forEach(function (p, i) {
+    labelsHtml += '<text x="' + cx(i) + '" y="' + (H - 12) + '" font-size="9" text-anchor="middle" fill="var(--text-secondary)">' +
+      escapeHtml(formatTrendLabel_(p.period, summaryMode)) + '</text>';
+    if (p.total <= 0) {
+      noDataHtml += '<text x="' + cx(i) + '" y="' + (y1 - 6) + '" font-size="9" text-anchor="middle" fill="var(--text-secondary)" opacity="0.5">–</text>';
     }
+  });
 
-    /**
-     * FASE 6: export ringkasan Dashboard yang lagi ditampilkan ke 1 file .xlsx (3 sheet:
-     * Leaderboard, Lokasi Bermasalah, SKU Bermasalah). Pakai data yang SUDAH di-cache di
-     * lastDashboardExport (hasil render terakhir) -- tidak query ulang ke server, dan pakai
-     * XLSX (SheetJS) yang sudah dimuat di app ini untuk baca file upload.
-     */
-    function exportDashboardExcel() {
-      try {
-        const wb = XLSX.utils.book_new();
-        const modeLabel = summaryMode === 'monthly' ? 'Bulanan' : 'Harian';
+  // Area transparan per kolom untuk tooltip hover (tanggal, accuracy, hit, discrepancy).
+  let hoverHtml = '';
+  list.forEach(function (p, i) {
+    hoverHtml += '<rect class="trend-hover-rect" data-idx="' + i + '" x="' + (x0 + colW * i) + '" y="0' +
+      '" width="' + colW + '" height="' + H + '" fill="transparent"></rect>';
+  });
 
-        const lbRows = lastDashboardExport.leaderboard.map(function (p) {
-          return {
-            Nama: p.nama, 'Total Item': p.total, 'Hit (Benar)': p.hit,
-            'Akurasi (%)': p.akurasi, 'Discrepancy (%)': p.persenDiscrepancy
-          };
-        });
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lbRows.length ? lbRows : [{ Info: 'Tidak ada data' }]), 'Leaderboard');
+  svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+  svg.innerHTML = gridHtml + barsHtml + lineHtml + pointsHtml + barLabelsHtml + lineLabelsHtml + noDataHtml + labelsHtml + hoverHtml;
 
-        const locRows = lastDashboardExport.locations.map(function (p) {
-          return { Lokasi: p.lokasi, 'Jumlah Discrepancy': p.jumlah, 'Total Selisih (abs)': p.totalSelisih };
-        });
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(locRows.length ? locRows : [{ Info: 'Tidak ada data' }]), 'Lokasi Bermasalah');
+  const hoverRects = svg.querySelectorAll('.trend-hover-rect');
+  hoverRects.forEach(function (rectEl) {
+    rectEl.addEventListener('mouseenter', function () { showTrendTooltip_(list[+rectEl.dataset.idx], rectEl, chartWrap, tooltip); });
+    rectEl.addEventListener('mousemove', function () { showTrendTooltip_(list[+rectEl.dataset.idx], rectEl, chartWrap, tooltip); });
+    rectEl.addEventListener('mouseleave', function () { tooltip.classList.remove('show'); });
+  });
 
-        const skuRows = lastDashboardExport.sku.map(function (p) {
-          return {
-            Article: p.article, Deskripsi: p.description, 'Jumlah Discrepancy': p.jumlah,
-            'Jumlah Lokasi': p.jumlahLokasi, 'Total Selisih (abs)': p.totalSelisih
-          };
-        });
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(skuRows.length ? skuRows : [{ Info: 'Tidak ada data' }]), 'SKU Bermasalah');
+  renderTrendSummary_(list, validDays);
+}
 
-        const namaFile = 'Dashboard_CycleCount_' + modeLabel + '_' + lastDashboardExport.periodLabel + '.xlsx';
-        XLSX.writeFile(wb, namaFile);
-      } catch (e) {
-        alert('Gagal export Excel: ' + e.message);
-      }
+function showTrendTooltip_(p, rectEl, chartWrap, tooltip) {
+  const label = escapeHtml(formatTrendLabel_(p.period, summaryMode));
+  if (p.total <= 0) {
+    tooltip.innerHTML = '<b>' + label + '</b><br>Tidak ada data';
+  } else {
+    tooltip.innerHTML = '<b>' + label + '</b><br>Accuracy: ' + p.akurasi + '%<br>Hit: ' + p.hit + '<br>Discrepancy: ' + p.discrepancy;
+  }
+  const rectBox = rectEl.getBoundingClientRect();
+  const wrapBox = chartWrap.getBoundingClientRect();
+  tooltip.style.left = (rectBox.left - wrapBox.left + rectBox.width / 2) + 'px';
+  tooltip.style.top = (rectBox.top - wrapBox.top) + 'px';
+  tooltip.classList.add('show');
+}
+
+// Ringkasan singkat + insight otomatis -- murni diturunkan dari data trend yang sudah ada
+// (tidak ada query/hitungan baru ke server).
+function renderTrendSummary_(list, validDays) {
+  const avgEl = el('trendAvgAkurasi');
+  const totalDiscEl = el('trendTotalDisc');
+  const changeEl = el('trendChange');
+  const insightEl = el('trendInsightBox');
+
+  let totalDisc = 0;
+  list.forEach(function (p) { totalDisc += p.discrepancy; });
+  totalDiscEl.textContent = totalDisc;
+
+  if (!validDays.length) {
+    avgEl.textContent = '-';
+    changeEl.textContent = '-';
+    insightEl.innerHTML = '<div class="trend-insight-line">Belum ada data pada periode ini.</div>';
+    return;
+  }
+
+  let sumAkurasi = 0;
+  validDays.forEach(function (p) { sumAkurasi += p.akurasi; });
+  const avgAkurasi = Math.round((sumAkurasi / validDays.length) * 10) / 10;
+  avgEl.textContent = avgAkurasi + '%';
+
+  let changeHtml = '-';
+  let trendLine = '';
+  if (validDays.length >= 2) {
+    const last = validDays[validDays.length - 1];
+    const prev = validDays[validDays.length - 2];
+    const delta = Math.round((last.akurasi - prev.akurasi) * 10) / 10;
+    if (delta > 0) {
+      changeHtml = '<span style="color:var(--green);">▲ ' + delta + ' pt</span>';
+      trendLine = '💡 Accuracy meningkat ' + delta + ' pt dibanding periode sebelumnya.';
+    } else if (delta < 0) {
+      changeHtml = '<span style="color:var(--red);">▼ ' + Math.abs(delta) + ' pt</span>';
+      trendLine = '💡 Accuracy menurun ' + Math.abs(delta) + ' pt dibanding periode sebelumnya.';
+    } else {
+      changeHtml = '<span style="color:var(--text-secondary);">▬ 0 pt</span>';
+      trendLine = '💡 Accuracy stabil dibanding periode sebelumnya.';
     }
+  }
+  changeEl.innerHTML = changeHtml;
 
-    function loadTopProblems(periodValue) {
-      google.script.run
-        .withSuccessHandler(function (list) {
-          lastDashboardExport.locations = list || [];
-          renderProblemBarList_('locationsCard', 'locationsList', list, function (p) {
-            return { label: p.lokasi, sub: p.jumlah + 'x &middot; total selisih ' + p.totalSelisih, persen: p.persen };
-          });
-        })
-        .withFailureHandler(function () {})
-        .getTopProblemLocations(summaryMode, periodValue, currentUser.username);
+  let discLine = '';
+  let maxDiscDay = null;
+  list.forEach(function (p) { if (!maxDiscDay || p.discrepancy > maxDiscDay.discrepancy) maxDiscDay = p; });
+  if (maxDiscDay && maxDiscDay.discrepancy > 0) {
+    discLine = '📌 Discrepancy tertinggi terjadi pada ' + escapeHtml(formatTrendLabel_(maxDiscDay.period, summaryMode)) +
+      ' (' + maxDiscDay.discrepancy + ' item).';
+  }
 
-      google.script.run
-        .withSuccessHandler(function (list) {
-          lastDashboardExport.sku = list || [];
-          renderProblemBarList_('skuCard', 'skuList', list, function (p) {
-            return { label: p.article + ' — ' + p.description, sub: p.jumlah + 'x &middot; ' + p.jumlahLokasi + ' lokasi &middot; total selisih ' + p.totalSelisih, persen: p.persen };
-          });
-        })
-        .withFailureHandler(function () {})
-        .getTopProblemSKU(summaryMode, periodValue, currentUser.username);
-    }
+  insightEl.innerHTML =
+    (trendLine ? '<div class="trend-insight-line">' + trendLine + '</div>' : '') +
+    (discLine ? '<div class="trend-insight-line">' + discLine + '</div>' : '');
+}
 
-    function renderProblemBarList_(cardId, listId, list, mapFn) {
-      const card = el(cardId);
-      const listEl = el(listId);
+/**
+ * FASE 6: export ringkasan Dashboard yang lagi ditampilkan ke 1 file .xlsx (3 sheet:
+ * Leaderboard, Lokasi Bermasalah, SKU Bermasalah). Pakai data yang SUDAH di-cache di
+ * lastDashboardExport (hasil render terakhir) -- tidak query ulang ke server, dan pakai
+ * XLSX (SheetJS) yang sudah dimuat di app ini untuk baca file upload.
+ */
+function exportDashboardExcel() {
+  try {
+    const wb = XLSX.utils.book_new();
+    const modeLabel = summaryMode === 'monthly' ? 'Bulanan' : 'Harian';
+
+    const lbRows = lastDashboardExport.leaderboard.map(function (p) {
+      return {
+        Nama: p.nama, 'Total Item': p.total, 'Hit (Benar)': p.hit,
+        'Akurasi (%)': p.akurasi, 'Discrepancy (%)': p.persenDiscrepancy
+      };
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(lbRows.length ? lbRows : [{ Info: 'Tidak ada data' }]), 'Leaderboard');
+
+    const locRows = lastDashboardExport.locations.map(function (p) {
+      return { Lokasi: p.lokasi, 'Jumlah Discrepancy': p.jumlah, 'Total Selisih (abs)': p.totalSelisih };
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(locRows.length ? locRows : [{ Info: 'Tidak ada data' }]), 'Lokasi Bermasalah');
+
+    const skuRows = lastDashboardExport.sku.map(function (p) {
+      return {
+        Article: p.article, Deskripsi: p.description, 'Jumlah Discrepancy': p.jumlah,
+        'Jumlah Lokasi': p.jumlahLokasi, 'Total Selisih (abs)': p.totalSelisih
+      };
+    });
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(skuRows.length ? skuRows : [{ Info: 'Tidak ada data' }]), 'SKU Bermasalah');
+
+    const namaFile = 'Dashboard_CycleCount_' + modeLabel + '_' + lastDashboardExport.periodLabel + '.xlsx';
+    XLSX.writeFile(wb, namaFile);
+  } catch (e) {
+    alert('Gagal export Excel: ' + e.message);
+  }
+}
+
+function loadTopProblems(periodValue) {
+  api.getTopProblemLocations(summaryMode, periodValue, currentUser.username)
+    .then(function (list) {
+      lastDashboardExport.locations = list || [];
+      renderProblemBarList_('locationsCard', 'locationsList', list, function (p) {
+        return { label: p.lokasi, sub: p.jumlah + 'x &middot; total selisih ' + p.totalSelisih, persen: p.persen };
+      });
+    })
+    .catch(function () {});
+
+  api.getTopProblemSKU(summaryMode, periodValue, currentUser.username)
+    .then(function (list) {
+      lastDashboardExport.sku = list || [];
+      renderProblemBarList_('skuCard', 'skuList', list, function (p) {
+        return { label: p.article + ' — ' + p.description, sub: p.jumlah + 'x &middot; ' + p.jumlahLokasi + ' lokasi &middot; total selisih ' + p.totalSelisih, persen: p.persen };
+      });
+    })
+    .catch(function () {});
+}
+
+function renderProblemBarList_(cardId, listId, list, mapFn) {
+  const card = el(cardId);
+  const listEl = el(listId);
+  if (!list.length) { card.classList.add('hidden'); return; }
+  listEl.innerHTML = '';
+  list.forEach(function (item) {
+    const m = mapFn(item);
+    const row = document.createElement('div');
+    row.className = 'err-row';
+    row.innerHTML =
+      '<div class="err-row-top"><span class="err-label">' + escapeHtml(m.label) + '</span>' +
+      '<span class="err-pct">' + m.sub + '</span></div>' +
+      '<div class="err-bar-bg"><div class="err-bar-fill" style="width:' + m.persen + '%;"></div></div>';
+    listEl.appendChild(row);
+  });
+  card.classList.remove('hidden');
+}
+
+function loadErrorAnalysis(periodValue) {
+  api.getErrorAnalysis(summaryMode, periodValue, currentUser.username)
+    .then(function (list) {
+      const card = el('errorAnalysisCard');
+      const listEl = el('errorAnalysisList');
       if (!list.length) { card.classList.add('hidden'); return; }
       listEl.innerHTML = '';
-      list.forEach(function (item) {
-        const m = mapFn(item);
+      list.forEach(function (a) {
         const row = document.createElement('div');
         row.className = 'err-row';
         row.innerHTML =
-          '<div class="err-row-top"><span class="err-label">' + escapeHtml(m.label) + '</span>' +
-          '<span class="err-pct">' + m.sub + '</span></div>' +
-          '<div class="err-bar-bg"><div class="err-bar-fill" style="width:' + m.persen + '%;"></div></div>';
+          '<div class="err-row-top"><span class="err-label">' + escapeHtml(a.alasan) + '</span>' +
+          '<span class="err-pct">' + a.persen + '%</span></div>' +
+          '<div class="err-bar-bg"><div class="err-bar-fill" style="width:' + a.persen + '%;"></div></div>';
         listEl.appendChild(row);
       });
       card.classList.remove('hidden');
-    }
+    })
+    .catch(function () {});
+}
 
-    function loadErrorAnalysis(periodValue) {
-      google.script.run
-        .withSuccessHandler(function (list) {
-          const card = el('errorAnalysisCard');
-          const listEl = el('errorAnalysisList');
-          if (!list.length) { card.classList.add('hidden'); return; }
-          listEl.innerHTML = '';
-          list.forEach(function (a) {
-            const row = document.createElement('div');
-            row.className = 'err-row';
-            row.innerHTML =
-              '<div class="err-row-top"><span class="err-label">' + escapeHtml(a.alasan) + '</span>' +
-              '<span class="err-pct">' + a.persen + '%</span></div>' +
-              '<div class="err-bar-bg"><div class="err-bar-fill" style="width:' + a.persen + '%;"></div></div>';
-            listEl.appendChild(row);
-          });
-          card.classList.remove('hidden');
-        })
-        .withFailureHandler(function () {})
-        .getErrorAnalysis(summaryMode, periodValue, currentUser.username);
-    }
+function showUserDetail(nama) {
+  const periodValue = summaryMode === 'daily' ? el('summaryDate').value : el('summaryMonth').value;
+  if (!periodValue) return;
+  api.getUserSummary(nama, summaryMode, periodValue, currentUser.username)
+    .then(function (res) {
+      el('userDetailName').textContent = 'Ringkasan — ' + res.nama;
+      el('udTotal').textContent = res.total;
+      el('udDisc').textContent = res.kesalahanHitung;
+      el('udAkurasi').textContent = res.akurasi + '%';
+      el('udDiscPct').textContent = res.persenDiscrepancy + '%';
+      el('userDetailCard').classList.remove('hidden');
+      el('userDetailCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    })
+    .catch(onServerError_);
 
-    function showUserDetail(nama) {
-      const periodValue = summaryMode === 'daily' ? el('summaryDate').value : el('summaryMonth').value;
-      if (!periodValue) return;
-      google.script.run
-        .withSuccessHandler(function (res) {
-          el('userDetailName').textContent = 'Ringkasan — ' + res.nama;
-          el('udTotal').textContent = res.total;
-          el('udDisc').textContent = res.kesalahanHitung;
-          el('udAkurasi').textContent = res.akurasi + '%';
-          el('udDiscPct').textContent = res.persenDiscrepancy + '%';
-          el('userDetailCard').classList.remove('hidden');
-          el('userDetailCard').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        })
-        .withFailureHandler(onServerError_)
-        .getUserSummary(nama, summaryMode, periodValue, currentUser.username);
+  api.getUserInvestigasiSummary(nama, summaryMode, periodValue, currentUser.username)
+    .then(function (res) {
+      const section = el('udInvestigasiSection');
+      if (!res.totalSelesai) { section.classList.add('hidden'); return; }
+      el('udTaskSelesai').textContent = res.totalSelesai;
+      el('udAvgDurasi').textContent = res.avgDurasiJam + 'j';
+      section.classList.remove('hidden');
+    })
+    .catch(function () { el('udInvestigasiSection').classList.add('hidden'); });
+}
 
-      google.script.run
-        .withSuccessHandler(function (res) {
-          const section = el('udInvestigasiSection');
-          if (!res.totalSelesai) { section.classList.add('hidden'); return; }
-          el('udTaskSelesai').textContent = res.totalSelesai;
-          el('udAvgDurasi').textContent = res.avgDurasiJam + 'j';
-          section.classList.remove('hidden');
-        })
-        .withFailureHandler(function () { el('udInvestigasiSection').classList.add('hidden'); })
-        .getUserInvestigasiSummary(nama, summaryMode, periodValue, currentUser.username);
-    }
+function closeUserDetail() { el('userDetailCard').classList.add('hidden'); }
 
-    function closeUserDetail() { el('userDetailCard').classList.add('hidden'); }
+function loadBacklog() {
+  api.getPendingBacklog(currentUser.username)
+    .then(function (list) {
+      const card = el('backlogCard');
+      const listEl = el('backlogList');
+      if (!list.length) { card.classList.add('hidden'); return; }
+      listEl.innerHTML = '';
+      list.forEach(function (b) {
+        const wrap = document.createElement('div');
+        const row = document.createElement('div');
+        row.className = 'det-row clickable';
+        row.innerHTML =
+          '<div class="det-loc">' + escapeHtml(b.tanggal) + '<span class="backlog-chevron">▸</span></div>' +
+          '<span class="pill pill-pend">' + b.pending + ' dari ' + b.total + ' pending</span>';
 
-    function loadBacklog() {
-      google.script.run
-        .withSuccessHandler(function (list) {
-          const card = el('backlogCard');
-          const listEl = el('backlogList');
-          if (!list.length) { card.classList.add('hidden'); return; }
-          listEl.innerHTML = '';
-          list.forEach(function (b) {
-            const wrap = document.createElement('div');
-            const row = document.createElement('div');
-            row.className = 'det-row clickable';
-            row.innerHTML =
-              '<div class="det-loc">' + escapeHtml(b.tanggal) + '<span class="backlog-chevron">▸</span></div>' +
-              '<span class="pill pill-pend">' + b.pending + ' dari ' + b.total + ' pending</span>';
+        const detail = document.createElement('div');
+        detail.className = 'backlog-detail hidden';
 
-            const detail = document.createElement('div');
-            detail.className = 'backlog-detail hidden';
+        row.addEventListener('click', function () {
+          const isOpen = !detail.classList.contains('hidden');
+          listEl.querySelectorAll('.backlog-detail').forEach(function (d) { d.classList.add('hidden'); });
+          listEl.querySelectorAll('.backlog-chevron').forEach(function (c) { c.textContent = '▸'; });
+          if (isOpen) return;
 
-            row.addEventListener('click', function () {
-              const isOpen = !detail.classList.contains('hidden');
-              listEl.querySelectorAll('.backlog-detail').forEach(function (d) { d.classList.add('hidden'); });
-              listEl.querySelectorAll('.backlog-chevron').forEach(function (c) { c.textContent = '▸'; });
-              if (isOpen) return;
+          row.querySelector('.backlog-chevron').textContent = '▾';
+          detail.classList.remove('hidden');
+          if (detail.dataset.loaded) return;
 
-              row.querySelector('.backlog-chevron').textContent = '▾';
-              detail.classList.remove('hidden');
-              if (detail.dataset.loaded) return;
+          detail.innerHTML = '<div class="hint">Memuat...</div>';
+          api.getBacklogDetailByDate(b.tanggal, currentUser.username)
+            .then(function (users) {
+              detail.innerHTML = '';
+              if (!users.length) {
+                detail.innerHTML = '<div class="hint">Semua sudah selesai.</div>';
+              } else {
+                users.forEach(function (u) {
+                  const urow = document.createElement('div');
+                  urow.className = 'det-row backlog-user-row';
+                  urow.innerHTML =
+                    '<div class="det-loc">' + escapeHtml(u.namaPetugas) + '</div>' +
+                    '<span class="pill pill-disc">' + u.pending + ' dari ' + u.total + ' belum</span>';
+                  detail.appendChild(urow);
+                });
+              }
+              detail.dataset.loaded = '1';
+            })
+            .catch(onServerError_);
+        });
 
-              detail.innerHTML = '<div class="hint">Memuat...</div>';
-              google.script.run
-                .withSuccessHandler(function (users) {
-                  detail.innerHTML = '';
-                  if (!users.length) {
-                    detail.innerHTML = '<div class="hint">Semua sudah selesai.</div>';
-                  } else {
-                    users.forEach(function (u) {
-                      const urow = document.createElement('div');
-                      urow.className = 'det-row backlog-user-row';
-                      urow.innerHTML =
-                        '<div class="det-loc">' + escapeHtml(u.namaPetugas) + '</div>' +
-                        '<span class="pill pill-disc">' + u.pending + ' dari ' + u.total + ' belum</span>';
-                      detail.appendChild(urow);
-                    });
-                  }
-                  detail.dataset.loaded = '1';
-                })
-                .withFailureHandler(onServerError_)
-                .getBacklogDetailByDate(b.tanggal, currentUser.username);
-            });
-
-            wrap.appendChild(row);
-            wrap.appendChild(detail);
-            listEl.appendChild(wrap);
-          });
-          card.classList.remove('hidden');
-        })
-        .withFailureHandler(onServerError_)
-        .getPendingBacklog(currentUser.username);
-    }
+        wrap.appendChild(row);
+        wrap.appendChild(detail);
+        listEl.appendChild(wrap);
+      });
+      card.classList.remove('hidden');
+    })
+    .catch(onServerError_);
+}
