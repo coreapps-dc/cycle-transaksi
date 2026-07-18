@@ -47,7 +47,8 @@
 
         document.getElementById("app").innerHTML = body1 + body2;
 
-        // Baru load semua JavaScript
+        // Load JavaScript sesuai urutan
+        await loadScript("js/api.js");
         await loadScript("js/core.js");
         await loadScript("js/cycle-validasi.js");
         await loadScript("js/admin.js");
