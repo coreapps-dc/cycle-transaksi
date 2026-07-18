@@ -2,7 +2,7 @@
 // api.js
 // Semua komunikasi antara GitHub Pages ↔ Google Apps Script
 // ======================================================
-const API_URL = "https://script.google.com/a/macros/kawanlamacorp.com/s/AKfycbx3uW7Tte0Wv8duWUl39cej1Zc_A9fYKw6IuPp3b-yZf-_Q0m6lBAs2TLFRVEfdRt5laA/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbx06mGxcF-V16G5lcpGbsxOe3gQbgD2gWjOZPMpm0ON8xpvmh4-Nf6ymSuvBXEAR8hj1Q/exec";
 
 // Helper request generik. Dipakai semua fungsi di object `api` di bawah.
 // PENTING: Content-Type sengaja "text/plain" (bukan "application/json") supaya
